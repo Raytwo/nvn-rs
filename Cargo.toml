@@ -9,4 +9,4 @@ edition = "2018"
 nvn-macro = { path = "./nvn-macro" }
 modular-bitfield = "0.10"
 libc-nnsdk = { git = "https://github.com/ultimate-research/libc-nnsdk.git" }
-nn = { path = "../nn" }
+nn = { git = "https://github.com/blu-dev/nn-rs" }
