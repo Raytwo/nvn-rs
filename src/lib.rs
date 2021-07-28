@@ -1,5 +1,6 @@
 use nvn_macro::*;
 use libc::*;
+use modular_bitfield::prelude::*;
 
 static mut DEVICE_HAS_INIT: bool = false;
 static mut GLOBAL_DEVICE: Device = Device::new();
@@ -7,6 +8,7 @@ static mut GLOBAL_DEVICE: Device = Device::new();
 pub use nn::vi::NativeWindowHandle as NativeWindowHandle;
 
 #[repr(C)]
+#[derive(Debug, Copy, Clone)]
 pub struct CommandHandle(u64);
 
 #[repr(C)]
@@ -124,5 +126,59 @@ pub struct Queue {
     pub submit_commands: (),
     #[nvn_proc(fn nvnQueueFlush())]
     pub flush: (),
-    
+}
+
+#[nvn_struct(160, nvn_resolver)]
+pub struct CommandBuffer {
+    #[nvn_proc(fn nvnCommandBufferInitialize(device: *const Device) -> bool)]
+    pub initialize: (),
+    #[nvn_proc(fn nvnCommandBufferFinalize())]
+    pub finalize: (),
+    #[nvn_proc(fn nvnCommandBufferAddCommandMemory(pool: *const MemoryPool, offset: u64, size: usize))]
+    pub add_command_memory: (),
+    #[nvn_proc(fn nvnCommandBufferAddControlMemory(memory: *const u8, size: usize))]
+    pub add_control_memory: (),
+    #[nvn_proc(fn nvnCommandBufferBeginRecording())]
+    pub begin_recording: (),
+    #[nvn_proc(fn nvnCommandBufferEndRecording() -> CommandHandle)]
+    pub end_recording: (),
+    #[nvn_proc(fn nvnCommandBufferSetScissor(x: i32, y: u32, w: u32, h: u32))]
+    pub set_scissor: (),
+    #[nvn_proc(fn nvnCommandBufferClearColor(index: i32, color: *const f32, mask: u8))]
+    pub clear_color: (),
+}
+
+#[nvn_struct(64, nvn_resolver)]
+pub struct MemoryPoolBuilder {
+    #[nvn_proc(fn nvnMemoryPoolBuilderSetDevice(device: *const Device) -> *const MemoryPoolBuilder)]
+    pub set_device: (),
+    #[nvn_proc(fn nvnMemoryPoolBuilderSetDefaults() -> *const MemoryPoolBuilder)]
+    pub set_defaults: (),
+    #[nvn_proc(fn nvnMemoryPoolBuilderSetFlags(flags: MemoryPoolFlags) -> *const MemoryPoolBuilder)]
+    pub set_flags: (),
+    #[nvn_proc(fn nvnMemoryPoolBuilderSetStorage(memory: *const u8, size: usize) -> *const MemoryPoolBuilder)]
+    pub set_storage: (),
+}
+
+#[nvn_struct(256, nvn_resolver)]
+pub struct MemoryPool {
+    #[nvn_proc(fn nvnMemoryPoolInitialize(builder: *const MemoryPoolBuilder) -> bool)]
+    pub initialize: (),
+}
+
+#[bitfield]
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub struct MemoryPoolFlags {
+    pub cpu_no_access: bool,
+    pub cpu_uncached: bool,
+    pub cpu_cached: bool,
+    pub gpu_no_access: bool,
+    pub gpu_uncached: bool,
+    pub gpu_cached: bool,
+    pub shader_code: bool,
+    pub is_compressible: bool,
+    pub is_physical: bool,
+    pub is_virtual: bool,
+    unused: B22,
 }

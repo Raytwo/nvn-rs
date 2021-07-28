@@ -7,6 +7,6 @@ edition = "2018"
 
 [dependencies]
 nvn-macro = { path = "./nvn-macro" }
-bitflags = "1.2.1"
-libc-nnsdk = { path = "../libc-nnsdk" }
+modular-bitfield = "0.10"
+libc-nnsdk = { git = "https://github.com/ultimate-research/libc-nnsdk.git" }
 nn = { path = "../nn" }
