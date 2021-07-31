@@ -128,6 +128,14 @@ pub struct Queue {
     pub flush: (),
 }
 
+#[nvn_struct(192, nvn_resolver)]
+pub struct Texture {
+    #[nvn_proc(fn nvnTextureGetWidth() -> i32)]
+    pub get_width: (),
+    #[nvn_proc(fn nvnTextureGetHeight() -> i32)]
+    pub get_height: (),
+}
+
 #[nvn_struct(160, nvn_resolver)]
 pub struct CommandBuffer {
     #[nvn_proc(fn nvnCommandBufferInitialize(device: *const Device) -> bool)]
@@ -142,10 +150,16 @@ pub struct CommandBuffer {
     pub begin_recording: (),
     #[nvn_proc(fn nvnCommandBufferEndRecording() -> CommandHandle)]
     pub end_recording: (),
+    #[nvn_proc(fn nvnCommandBufferSetRenderTargets(count: i32, target: *const *const Texture, texture_view: *const u8, depth_texture: *const u8, depth_view: *const u8))]
+    pub set_render_targets: (),
     #[nvn_proc(fn nvnCommandBufferSetScissor(x: i32, y: u32, w: u32, h: u32))]
     pub set_scissor: (),
-    #[nvn_proc(fn nvnCommandBufferClearColor(index: i32, color: *const f32, mask: u8))]
+    #[nvn_proc(fn nvnCommandBufferSetViewport(x: i32, y: u32, w: u32, h: u32))]
+    pub set_viewport: (),
+    #[nvn_proc(fn nvnCommandBufferClearColor(index: i32, color: *const f32, mask: ClearColorMask))]
     pub clear_color: (),
+    #[nvn_proc(fn nvnCommandBufferClearTexture(texture: *const Texture, texture_view: *const u8, copy_region: *const u8, color: *const f32, mask: ClearColorMask))]
+    pub clear_texture: (),
 }
 
 #[nvn_struct(64, nvn_resolver)]
@@ -164,6 +178,8 @@ pub struct MemoryPoolBuilder {
 pub struct MemoryPool {
     #[nvn_proc(fn nvnMemoryPoolInitialize(builder: *const MemoryPoolBuilder) -> bool)]
     pub initialize: (),
+    #[nvn_proc(fn nvnMemoryPoolFinalize())]
+    pub finalize: (),
 }
 
 #[bitfield]
@@ -181,4 +197,15 @@ pub struct MemoryPoolFlags {
     pub is_physical: bool,
     pub is_virtual: bool,
     unused: B22,
+}
+
+#[bitfield]
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub struct ClearColorMask {
+    pub r: bool,
+    pub g: bool,
+    pub b: bool,
+    pub rgba: bool,
+    unused: B28,
 }
