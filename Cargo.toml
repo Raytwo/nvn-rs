@@ -10,3 +10,7 @@ nvn-macro = { path = "./nvn-macro" }
 modular-bitfield = "0.10"
 libc-nnsdk = { git = "https://github.com/ultimate-research/libc-nnsdk.git" }
 nn = { git = "https://github.com/blu-dev/nn-rs" }
+thiserror = "1.0.26"
+
+[features]
+runtime = []

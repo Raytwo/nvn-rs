@@ -1,9 +1,16 @@
+#![allow(dead_code)]
+
 use nvn_macro::*;
 use libc::*;
 use modular_bitfield::prelude::*;
 
 static mut DEVICE_HAS_INIT: bool = false;
+#[cfg(not(feature = "runtime"))]
 static mut GLOBAL_DEVICE: Device = Device::new();
+#[cfg(feature = "runtime")]
+static mut GLOBAL_DEVICE: Option<*mut Device> = None;
+
+pub mod managed;
 
 pub use nn::vi::NativeWindowHandle as NativeWindowHandle;
 
@@ -34,15 +41,16 @@ fn nvn_resolver(ident: &str) -> (*const c_void, bool) {
                 if nvn_internal_nvnDeviceGetProcAddress_func_ptr.is_null() {
                     nvn_internal_nvnDeviceGetProcAddress_func_ptr = nvnBootstrapLoader(ident.as_ptr() as _) as _;
                 }
-                let ret = std::mem::transmute::<_, extern "C" fn(*const Device, *const c_char) -> *const c_void>(nvn_internal_nvnDeviceGetProcAddress_func_ptr)(&GLOBAL_DEVICE, ident.as_ptr() as _);
+                let ret = std::mem::transmute::<_, extern "C" fn(*const Device, *const c_char) -> *const c_void>(nvn_internal_nvnDeviceGetProcAddress_func_ptr)(global_device(), ident.as_ptr() as _);
                 (ret, true)
             } else {
-                (GLOBAL_DEVICE.get_proc(ident.as_ptr() as _), true)
+                (global_device().get_proc(ident.as_ptr() as _), true)
             }
         }
     }
 }
 
+#[cfg(not(feature = "runtime"))]
 pub fn init() {
     unsafe {
         nvnDeviceInitialize::resolve();
@@ -62,8 +70,28 @@ pub fn init() {
     }
 }
 
+#[cfg(not(feature = "runtime"))]
 pub fn global_device() -> &'static mut Device {
     unsafe { &mut GLOBAL_DEVICE }
+}
+
+#[cfg(feature = "runtime")]
+pub fn global_device() -> &'static mut Device {
+    unsafe {
+        std::mem::transmute(
+            *GLOBAL_DEVICE
+                .as_ref()
+                .expect("Global device not initialized!")
+        )
+    }
+}
+
+#[cfg(feature = "runtime")]
+pub fn set_global_device(device: *mut Device) {
+    unsafe {
+        GLOBAL_DEVICE = Some(device);
+        DEVICE_HAS_INIT = true;
+    }
 }
 
 #[nvn_struct(0x40, nvn_resolver)]
@@ -172,6 +200,8 @@ pub struct MemoryPoolBuilder {
     pub set_flags: (),
     #[nvn_proc(fn nvnMemoryPoolBuilderSetStorage(memory: *const u8, size: usize) -> *const MemoryPoolBuilder)]
     pub set_storage: (),
+    #[nvn_proc(const fn nvnMemoryPoolBuilderGetMemory() -> *mut u8)]
+    pub get_memory: ()
 }
 
 #[nvn_struct(256, nvn_resolver)]
@@ -180,6 +210,15 @@ pub struct MemoryPool {
     pub initialize: (),
     #[nvn_proc(fn nvnMemoryPoolFinalize())]
     pub finalize: (),
+
+    #[nvn_proc(const fn nvnMemoryPoolGetSize() -> usize)]
+    pub get_size: (),
+    #[nvn_proc(const fn nvnMemoryPoolGetFlags() -> MemoryPoolFlags)]
+    pub get_flags: (),
+    #[nvn_proc(const fn nvnMemoryPoolMap() -> *mut u8)]
+    pub map: (),
+    #[nvn_proc(const fn nvnMemoryPoolFlushMappedRange(offset: usize, size: usize))]
+    pub flush: ()
 }
 
 #[bitfield]
